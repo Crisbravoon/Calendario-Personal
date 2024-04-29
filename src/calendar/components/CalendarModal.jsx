@@ -1,5 +1,5 @@
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { addHours, differenceInSeconds } from 'date-fns';
 
 import Modal from 'react-modal';
@@ -7,7 +7,10 @@ import Modal from 'react-modal';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from 'date-fns/locale/es';
+
 import Swal from 'sweetalert2';
+
+import { useCalendarStore, useUiStore } from '../../hooks';
 
 
 const customStyles = {
@@ -25,12 +28,14 @@ Modal.setAppElement('#root');
 
 export const CalendarModal = () => {
 
+    const { isDateModalOpen, closeDateModal } = useUiStore();
+    const { activeEvents, startSavingEvent } = useCalendarStore()
+
     const [formSubmitted, setFormSubmitted] = useState(false);
-    const [isOpen, setIsOpen] = useState(true);
 
     const [formValue, setFormValue] = useState({
-        title: 'Cristóbal',
-        notes: 'Bravo',
+        title: '',
+        notes: '',
         start: new Date(),
         end: addHours(new Date(), 2),
     });
@@ -44,6 +49,13 @@ export const CalendarModal = () => {
             ? ''
             : 'is-invalid';
     }, [formValue, formSubmitted]);
+
+    //Mostrara el contenido dele vento  siempre cuando no sea null
+    useEffect(() => {
+        if (activeEvents !== null) {
+            setFormValue({ ...activeEvents });
+        }
+    }, [activeEvents]);
 
     const onInputChange = ({ target }) => {
         setFormValue({
@@ -61,13 +73,12 @@ export const CalendarModal = () => {
         });
     };
 
+    //Cierrra el modal
     const onCloseModal = () => {
-        console.log('Cerrando Modal');
-        //Cerramos el modal
-        setIsOpen(false);
+        closeDateModal();
     };
 
-    const onSubmit = (e) => {
+    const onSubmit = async (e) => {
         e.preventDefault();
         //El fomulario se intento postear.
         setFormSubmitted(true);
@@ -90,7 +101,10 @@ export const CalendarModal = () => {
             })
             return;
         };
-        console.log(formValue);
+
+        await startSavingEvent(formValue);
+        closeDateModal();
+        setFormSubmitted(false);
     };
 
     return (
@@ -98,7 +112,7 @@ export const CalendarModal = () => {
             className='modal'
             overlayClassName='modal-fondo'
             closeTimeoutMS={200}
-            isOpen={isOpen}
+            isOpen={isDateModalOpen}
             onRequestClose={onCloseModal}
             style={customStyles}>
             <h1> Nuevo evento 📜</h1>
